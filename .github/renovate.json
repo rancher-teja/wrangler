@@ -1,0 +1,31 @@
+{
+  "extends": [
+    "github>rancher/renovate-config#release"
+  ],
+  "baseBranchPatterns": [
+    "main",
+    "release/v2"
+  ],
+  "prHourlyLimit": 2,
+  "packageRules": [
+    {
+      "enabled": false,
+      "matchPackageNames": [
+        "/k8s.io/*/",
+        "/sigs.k8s.io/*/",
+        "/go.opentelemetry.io/*/",
+        "/github.com/prometheus/*/"
+      ]
+    },
+    {
+      "matchUpdateTypes": [
+        "major",
+        "minor"
+      ],
+      "enabled": false,
+      "matchPackageNames": [
+        "/github.com/rancher/lasso/*/"
+      ]
+    }
+  ]
+}

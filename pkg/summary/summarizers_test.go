@@ -1,0 +1,477 @@
+package summary
+
+import (
+	"os"
+	"testing"
+
+	"github.com/rancher/wrangler/v3/pkg/data"
+	"github.com/stretchr/testify/assert"
+)
+
+func TestCheckErrors(t *testing.T) {
+	type input struct {
+		data       data.Object
+		conditions []Condition
+		summary    Summary
+	}
+
+	type output struct {
+		summary Summary
+	}
+
+	testCases := []struct {
+		name           string
+		loadConditions func()
+		input          input
+		expected       output
+	}{
+		{
+			name: "gvk not detected - summary remains the same",
+			input: input{
+				data: data.Object{},
+				summary: Summary{
+					State: "testing",
+					Error: false,
+				},
+			},
+			expected: output{
+				summary: Summary{
+					State: "testing",
+					Error: false,
+				},
+			},
+		},
+		{
+			name: "gvk not found - summary remains the same",
+			input: input{
+				data: data.Object{
+					"APIVersion": "sample.cattle.io/v1",
+					"Kind":       "Sample",
+				},
+				summary: Summary{
+					State: "testing",
+					Error: false,
+				},
+			},
+			expected: output{
+				summary: Summary{
+					State: "testing",
+					Error: false,
+				},
+			},
+		},
+		{
+			name: "gvk found, no conditions provided",
+			input: input{
+				data: data.Object{
+					"APIVersion": "helm.cattle.io/v1",
+					"Kind":       "HelmChart",
+				},
+				summary: Summary{
+					State: "testing",
+					Error: false,
+				},
+			},
+			expected: output{
+				summary: Summary{
+					State: "testing",
+					Error: false,
+				},
+			},
+		},
+		{
+			name: "gvk found, condition not found",
+			input: input{
+				data: data.Object{
+					"APIVersion": "helm.cattle.io/v1",
+					"Kind":       "HelmChart",
+				},
+				conditions: []Condition{
+					NewCondition("JobFailed", "True", "", ""),
+				},
+				summary: Summary{
+					State: "testing",
+					Error: false,
+				},
+			},
+			expected: output{
+				summary: Summary{
+					State: "testing",
+					Error: false,
+				},
+			},
+		},
+		{
+			name: "gvk found, condition is error",
+			input: input{
+				data: data.Object{
+					"APIVersion": "helm.cattle.io/v1",
+					"Kind":       "HelmChart",
+				},
+				conditions: []Condition{
+					NewCondition("Failed", "True", "", "Helm Install Error"),
+				},
+				summary: Summary{
+					State: "testing",
+					Error: false,
+				},
+			},
+			expected: output{
+				summary: Summary{
+					State: "testing",
+					Error: true,
+					Message: []string{
+						"Helm Install Error",
+					},
+				},
+			},
+		},
+		{
+			name: "gvk found, condition is not an error",
+			input: input{
+				data: data.Object{
+					"APIVersion": "helm.cattle.io/v1",
+					"Kind":       "HelmChart",
+				},
+				conditions: []Condition{
+					NewCondition("Failed", "False", "", ""),
+				},
+				summary: Summary{
+					State: "testing",
+					Error: false,
+				},
+			},
+			expected: output{
+				summary: Summary{
+					State: "testing",
+					Error: false,
+				},
+			},
+		},
+		{
+			name: "load conditions - gvk not found",
+			input: input{
+				data: data.Object{
+					"APIVersion": "helm.cattle.io/v1",
+					"Kind":       "HelmChart",
+				},
+				conditions: []Condition{
+					NewCondition("Failed", "False", "", ""),
+				},
+				summary: Summary{
+					State: "testing",
+					Error: false,
+				},
+			},
+			expected: output{
+				summary: Summary{
+					State: "testing",
+					Error: false,
+				},
+			},
+			loadConditions: func() {
+				os.Setenv(checkGVKErrorMappingEnvVar, `
+					[
+						{
+							"gvk": "sample.cattle.io/v1, Kind=Sample",
+							"conditionMappings": [
+								{
+									"type": "Failed",
+									"status": ["True"]
+								}
+							]
+						}
+					]
+				`)
+			},
+		},
+		{
+			name: "load conditions - gvk found - condition is only informational",
+			input: input{
+				data: data.Object{
+					"APIVersion": "sample.cattle.io/v1",
+					"Kind":       "Sample",
+				},
+				conditions: []Condition{
+					NewCondition("Created", "True", "", ""),
+				},
+				summary: Summary{
+					State: "testing",
+					Error: false,
+				},
+			},
+			expected: output{
+				summary: Summary{
+					State: "testing",
+					Error: false,
+				},
+			},
+			loadConditions: func() {
+				os.Setenv(checkGVKErrorMappingEnvVar, `
+					[
+						{
+							"gvk": "sample.cattle.io/v1, Kind=Sample",
+							"conditionMappings": [
+								{
+									"type": "Created",
+									"status": []
+								}
+							]
+						}
+					]
+				`)
+			},
+		},
+		{
+			name: "load conditions - gvk found - is not an error",
+			input: input{
+				data: data.Object{
+					"APIVersion": "sample.cattle.io/v1",
+					"Kind":       "Sample",
+				},
+				conditions: []Condition{
+					NewCondition("Failed", "False", "", ""),
+				},
+				summary: Summary{
+					State: "testing",
+					Error: false,
+				},
+			},
+			expected: output{
+				summary: Summary{
+					State: "testing",
+					Error: false,
+				},
+			},
+			loadConditions: func() {
+				os.Setenv(checkGVKErrorMappingEnvVar, `
+					[
+						{
+							"gvk": "sample.cattle.io/v1, Kind=Sample",
+							"conditionMappings": [
+								{
+									"type": "Failed",
+									"status": ["True"]
+								}
+							]
+						}
+					]
+				`)
+			},
+		},
+		{
+			name: "load conditions - gvk found - is error",
+			input: input{
+				data: data.Object{
+					"APIVersion": "sample.cattle.io/v1",
+					"Kind":       "Sample",
+				},
+				conditions: []Condition{
+					NewCondition("Failed", "True", "", "Sample Failure"),
+				},
+				summary: Summary{
+					State: "testing",
+					Error: false,
+				},
+			},
+			expected: output{
+				summary: Summary{
+					State: "testing",
+					Error: true,
+					Message: []string{
+						"Sample Failure",
+					},
+				},
+			},
+			loadConditions: func() {
+				os.Setenv(checkGVKErrorMappingEnvVar, `
+					[
+						{
+							"gvk": "sample.cattle.io/v1, Kind=Sample",
+							"conditionMappings": [
+								{
+									"type": "Failed",
+									"status": ["True"]
+								}
+							]
+						}
+					]
+				`)
+			},
+		},
+		{
+			name: "fallback conditions",
+			input: input{
+				data: data.Object{
+					"APIVersion": "fallback.cattle.io/v1",
+					"Kind":       "Fallback",
+				},
+				conditions: []Condition{
+					NewCondition("Failed", "True", "", "Sample Failure"),
+				},
+				summary: Summary{
+					State: "testing",
+					Error: false,
+				},
+			},
+			expected: output{
+				summary: Summary{
+					State: "testing",
+					Error: true,
+					Message: []string{
+						"Sample Failure",
+					},
+				},
+			},
+		},
+		{
+			name: "condition has error at reason field",
+			input: input{
+				data: data.Object{
+					"APIVersion": "sample.cattle.io/v1",
+					"Kind":       "Sample",
+				},
+				conditions: []Condition{
+					NewCondition("SampleFailed", "True", "Error", "Error in Reason"),
+				},
+				summary: Summary{
+					State: "testing",
+					Error: false,
+				},
+			},
+			expected: output{
+				summary: Summary{
+					State: "testing",
+					Error: true,
+					Message: []string{
+						"Error in Reason",
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			if tc.loadConditions != nil {
+				tc.loadConditions()
+			}
+			initializeCheckErrors()
+			summary := checkErrors(tc.input.data, tc.input.conditions, tc.input.summary)
+
+			assert.Equal(t, tc.expected.summary, summary)
+		})
+	}
+
+}
+
+func TestCheckGeneration(t *testing.T) {
+	tests := []struct {
+		name      string
+		obj       data.Object
+		summary   Summary
+		wantState string
+		wantTrans bool
+	}{
+		{
+			name: "generation is int, observedGeneration is int, does nothing",
+			obj: data.Object{
+				"metadata": map[string]interface{}{
+					"generation": int(7),
+				},
+				"status": map[string]interface{}{
+					"observedGeneration": int(6),
+				},
+			},
+			summary:   Summary{HasObservedGeneration: true, State: ""},
+			wantState: "",
+			wantTrans: false,
+		},
+		{
+			name: "generation is int32, observedGeneration is int32, does nothing",
+			obj: data.Object{
+				"metadata": map[string]interface{}{
+					"generation": int32(5),
+				},
+				"status": map[string]interface{}{
+					"observedGeneration": int32(5),
+				},
+			},
+			summary:   Summary{HasObservedGeneration: true, State: ""},
+			wantState: "",
+			wantTrans: false,
+		},
+		{
+			name: "HasObservedGeneration false, does nothing",
+			obj: data.Object{
+				"metadata": map[string]interface{}{
+					"generation": int64(2),
+				},
+				"status": map[string]interface{}{
+					"observedGeneration": int64(2),
+				},
+			},
+			summary:   Summary{HasObservedGeneration: false, State: ""},
+			wantState: "",
+			wantTrans: false,
+		},
+		{
+			name: "metadata.generation not found, does nothing",
+			obj: data.Object{
+				"status": map[string]interface{}{
+					"observedGeneration": int64(2),
+				},
+			},
+			summary:   Summary{HasObservedGeneration: true, State: ""},
+			wantState: "",
+			wantTrans: false,
+		},
+		{
+			name: "observedGeneration equals generation, does nothing",
+			obj: data.Object{
+				"metadata": map[string]interface{}{
+					"generation": int64(2),
+				},
+				"status": map[string]interface{}{
+					"observedGeneration": int64(2),
+				},
+			},
+			summary:   Summary{HasObservedGeneration: true, State: ""},
+			wantState: "",
+			wantTrans: false,
+		},
+		{
+			name: "observedGeneration does not equal generation, sets in-progress and transitioning",
+			obj: data.Object{
+				"metadata": map[string]interface{}{
+					"generation": int64(3),
+				},
+				"status": map[string]interface{}{
+					"observedGeneration": int64(2),
+				},
+			},
+			summary:   Summary{HasObservedGeneration: true, State: ""},
+			wantState: "in-progress",
+			wantTrans: true,
+		},
+		{
+			name: "status does not exist, should set in-progress and transitioning",
+			obj: data.Object{
+				"metadata": map[string]interface{}{
+					"generation": int64(5),
+				},
+			},
+			summary:   Summary{HasObservedGeneration: true, State: ""},
+			wantState: "in-progress",
+			wantTrans: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := checkGeneration(tt.obj, nil, tt.summary)
+			assert.Equal(t, tt.wantState, got.State)
+			assert.Equal(t, tt.wantTrans, got.Transitioning)
+		})
+	}
+}

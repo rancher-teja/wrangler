@@ -1,8 +1,10 @@
 module github.com/rancher/wrangler/v3
 
-go 1.24.0
+go 1.25.0
 
-toolchain go1.24.2
+toolchain go1.25.4
+
+replace github.com/rancher/lasso => github.com/rancher-teja/lasso v0.0.1
 
 require (
 	github.com/evanphx/json-patch v5.9.11+incompatible
@@ -16,18 +18,18 @@ require (
 	golang.org/x/sync v0.18.0
 	golang.org/x/text v0.31.0
 	golang.org/x/tools v0.39.0
-	k8s.io/api v0.34.1
-	k8s.io/apiextensions-apiserver v0.34.1
-	k8s.io/apimachinery v0.34.1
-	k8s.io/client-go v0.34.1
-	k8s.io/code-generator v0.34.1
+	k8s.io/api v0.35.0
+	k8s.io/apiextensions-apiserver v0.35.0
+	k8s.io/apimachinery v0.35.0
+	k8s.io/client-go v0.35.0
+	k8s.io/code-generator v0.35.0
 	k8s.io/gengo v0.0.0-20250130153323-76c5745d3511
-	k8s.io/gengo/v2 v2.0.0-20250604051438-85fd79dbfd9f
-	k8s.io/kube-aggregator v0.34.1
-	k8s.io/kube-openapi v0.0.0-20250710124328-f3f2b991d03b
+	k8s.io/gengo/v2 v2.0.0-20250922181213-ec3ebc5fd46b
+	k8s.io/klog/v2 v2.130.1
+	k8s.io/kube-aggregator v0.35.0
+	k8s.io/kube-openapi v0.0.0-20250910181357-589584f1c912
 	sigs.k8s.io/cli-utils v0.37.2
 )
-
 require (
 	cel.dev/expr v0.24.0 // indirect
 	github.com/antlr4-go/antlr/v4 v4.13.0 // indirect

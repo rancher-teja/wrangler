@@ -18,6 +18,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"golang.org/x/tools/imports"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/klog/v2"
 	csargs "k8s.io/code-generator/cmd/client-gen/args"
 
 	cs "k8s.io/code-generator/cmd/client-gen/generators"
@@ -326,7 +327,11 @@ func generateOpenAPI(groups map[string]bool, customArgs *cgargs.CustomArgs) erro
 	}
 
 	getTargets := func(context *generator.Context) []generator.Target {
-		return oa.GetTargets(context, openAPIArgs)
+		boilerplate, err := gengo.GoBoilerplate(openAPIArgs.GoHeaderFile, gengo.StdBuildTag, gengo.StdGeneratedBy)
+		if err != nil {
+			klog.Fatalf("Failed loading boilerplate: %v", err)
+		}
+		return oa.GetOpenAPITargets(context, openAPIArgs, boilerplate)
 	}
 
 	return gengo.Execute(

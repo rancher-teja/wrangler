@@ -4,7 +4,7 @@ go 1.25.0
 
 toolchain go1.25.4
 
-replace github.com/rancher/lasso => github.com/rancher-teja/lasso v0.0.1
+replace github.com/rancher/lasso => github.com/rancher-teja/lasso v0.0.2-0.20260123062607-7d5ea1f02e72
 
 require (
 	github.com/evanphx/json-patch v5.9.11+incompatible

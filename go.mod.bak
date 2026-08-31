@@ -2,9 +2,6 @@ module github.com/rancher/wrangler/v3
 
 go 1.27.0
 
-replace (
-	github.com/rancher/lasso => github.com/rancher-teja/lasso v0.2.9-0.20260831033458-c4edd3080be1
-)
 require (
 	github.com/evanphx/json-patch v5.9.11+incompatible
 	github.com/moby/locker v1.0.1

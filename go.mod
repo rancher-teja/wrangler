@@ -2,9 +2,6 @@ module github.com/rancher/wrangler/v3
 
 go 1.27.0
 
-replace (
-	github.com/rancher/lasso => github.com/rancher-teja/lasso v0.2.9-0.20260831033458-c4edd3080be1
-)
 require (
 	github.com/evanphx/json-patch v5.9.11+incompatible
 	github.com/moby/locker v1.0.1
@@ -98,5 +95,4 @@ require (
 	sigs.k8s.io/randfill v1.0.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v6 v6.3.2 // indirect
 )
-
-replace github.com/rancher/lasso => github.com/rancher-teja/lasso v0.0.0-00010101000000-000000000000
+replace github.com/rancher/lasso => github.com/rancher-teja/lasso v0.2.9-0.20260831033458-c4edd3080be1
